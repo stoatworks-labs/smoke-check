@@ -1,0 +1,23 @@
+name: "Smoke-check a built static site"
+description: "Serve a built site, open it in headless Chromium, and fail on any runtime error or an empty app root. Catches what a green build cannot: code that compiles and then throws on first render."
+inputs:
+  dir:        { description: "Directory holding the built site (index.html)", required: true }
+  path:       { description: "URL path to load", default: "/" }
+  root:       { description: "CSS selector for the app root that must render text", default: "#root, #app, main" }
+  min-text:   { description: "Minimum rendered characters in the root", default: "20" }
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        cd "${{ github.action_path }}"
+        npm init -y >/dev/null 2>&1
+        npm i --no-audit --no-fund playwright@1 >/dev/null 2>&1
+        npx playwright install --with-deps chromium >/dev/null 2>&1
+    - shell: bash
+      env:
+        SMOKE_PATH: ${{ inputs.path }}
+        SMOKE_ROOT: ${{ inputs.root }}
+        SMOKE_MIN_TEXT: ${{ inputs.min-text }}
+      run: node "${{ github.action_path }}/smoke.mjs" "${{ inputs.dir }}"
