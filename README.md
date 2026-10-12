@@ -3,9 +3,9 @@
 > **AI-assisted project.** This codebase was created with [Claude](https://claude.com/claude-code)
 > (Anthropic), directed and reviewed by a human author.
 
-Serve a built static site, open it in headless Chromium, and **fail the job on any runtime error or an empty app root**.
+A GitHub Action that serves your built static site, opens it in headless Chromium, and fails the job on any runtime error or an app root that comes up empty.
 
-This is the check a green build cannot give you. On 2026-08-11 a Dependabot PR bumped `react` to 19 and left `react-dom` on 18 in RFutils. It installed, typechecked, linted, tested and built — and the hosted site rendered nothing but its footer for three weeks, until an outside user reported it. A React major mismatch does not fail a build; it throws on first render. This catches that class.
+A build can pass every step and still ship a blank page. On 2026-08-11 a Dependabot PR in RFutils bumped `react` to 19 and left `react-dom` on 18. It installed, typechecked, linted, tested and built without a murmur, and the hosted site then showed nothing but its footer for three weeks, until a user from outside the project reported it. A mismatched React major builds perfectly happily and then throws on first render. This action catches that sort of thing.
 
 ```yaml
       - name: Build
@@ -23,6 +23,6 @@ This is the check a green build cannot give you. On 2026-08-11 a Dependabot PR b
 | `root` | `#root, #app, main` | selector for the app root that must render text |
 | `min-text` | `20` | minimum characters of rendered text in the root |
 
-It fails on: any `pageerror`, any `console.error`, any failed request, a navigation timeout, or a root with fewer than `min-text` characters. It prints every error it saw.
+It fails on any `pageerror`, any `console.error`, any failed request, a navigation timeout, or a root with fewer than `min-text` characters, and it prints every error it saw.
 
-Pair it with `npm ls` in the same job: a `package.json` change with no `package-lock.json` change is a no-op under `npm ci`, and `npm ls` is what reports the resulting `invalid` dependency.
+It's worth running `npm ls` in the same job as well. A `package.json` change with no matching `package-lock.json` change does nothing under `npm ci`, and `npm ls` is what tells you about the `invalid` dependency that leaves behind.
