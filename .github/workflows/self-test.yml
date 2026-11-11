@@ -1,0 +1,41 @@
+name: self-test
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  # On the hosted runner Chromium's libraries are already there, so setup never touches apt.
+  # The bare container has none of them, which covers the path that installs them.
+  self-test:
+    name: self-test (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: ubuntu-latest, container: "" }
+          - { label: bare node container, container: "node:22-bookworm-slim" }
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        if: matrix.container == ''
+        with:
+          node-version: 22
+      - name: A page that renders passes
+        uses: ./
+        with:
+          dir: test/fixtures/ok
+      - name: A page that throws on first render fails
+        id: throws
+        continue-on-error: true
+        uses: ./
+        with:
+          dir: test/fixtures/throws
+      - name: The throwing page must have failed
+        if: steps.throws.outcome != 'failure'
+        run: |
+          echo "::error::smoke-check passed a page that throws on first render"
+          exit 1

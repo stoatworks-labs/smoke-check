@@ -12,9 +12,25 @@ runs:
       run: |
         set -euo pipefail
         cd "${{ github.action_path }}"
-        npm init -y >/dev/null 2>&1
-        npm i --no-audit --no-fund playwright@1 >/dev/null 2>&1
-        npx playwright install --with-deps chromium >/dev/null 2>&1
+        npm init -y >/dev/null
+        npm i --no-audit --no-fund --loglevel=error playwright@1
+        # The browser on its own: a download from Playwright's CDN, no apt.
+        npx playwright install chromium
+        # GitHub's hosted Ubuntu images already have the libraries Chromium needs, so try
+        # launching it before touching apt. `--with-deps` ran apt-get update over every
+        # source on the runner, and when one of them was down (Launchpad's PPAs, 2026-11-11)
+        # it hung for ten minutes and failed jobs that never needed a package.
+        probe='require("playwright").chromium.launch().then((b) => b.close())'
+        if node -e "$probe" 2>/dev/null; then
+          echo "Chromium launches, so its system libraries are already installed."
+        else
+          echo "Chromium won't launch yet. Installing its system libraries."
+          if [ "$(id -u)" -eq 0 ]; then SUDO=; else SUDO=sudo; fi
+          echo 'Acquire::http::Timeout "20"; Acquire::https::Timeout "20"; Acquire::Retries "1";' \
+            | $SUDO tee /etc/apt/apt.conf.d/99smoke-check-timeouts >/dev/null
+          timeout 600 npx playwright install-deps chromium
+          node -e "$probe"
+        fi
     - shell: bash
       env:
         SMOKE_PATH: ${{ inputs.path }}
