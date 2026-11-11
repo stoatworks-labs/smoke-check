@@ -11,7 +11,9 @@ runs:
     - shell: bash
       run: |
         set -euo pipefail
-        cd "${{ github.action_path }}"
+        # The env var, not the github.action_path expression: in a container job the
+        # expression gives the host's path, which doesn't exist inside the container.
+        cd "$GITHUB_ACTION_PATH"
         npm init -y >/dev/null
         npm i --no-audit --no-fund --loglevel=error playwright@1
         # The browser on its own: a download from Playwright's CDN, no apt.
@@ -36,4 +38,4 @@ runs:
         SMOKE_PATH: ${{ inputs.path }}
         SMOKE_ROOT: ${{ inputs.root }}
         SMOKE_MIN_TEXT: ${{ inputs.min-text }}
-      run: node "${{ github.action_path }}/smoke.mjs" "${{ inputs.dir }}"
+      run: node "$GITHUB_ACTION_PATH/smoke.mjs" "${{ inputs.dir }}"
